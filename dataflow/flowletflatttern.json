@@ -1,0 +1,70 @@
+{
+	"name": "flowletflatttern",
+	"properties": {
+		"type": "Flowlet",
+		"typeProperties": {
+			"sources": [
+				{
+					"linkedService": {
+						"referenceName": "AzureBlobStorage1",
+						"type": "LinkedServiceReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [],
+			"transformations": [
+				{
+					"name": "Flatten1"
+				},
+				{
+					"name": "output1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          address as (city as string, postalCode as integer, state as string, streetAddress as short),",
+				"          age as short,",
+				"          firstName as string,",
+				"          gender as string,",
+				"          id as short,",
+				"          lastName as string,",
+				"          phoneNumbers as (number as long, type as string)[],",
+				"          skills as string[]",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'json',",
+				"     container: 'thamizhcontainer',",
+				"     fileName: 'json file 2.json',",
+				"     documentForm: 'singleDocument',",
+				"     partitionBy('hash', 1)) ~> source1",
+				"source1 foldDown(unroll(skills, skills),",
+				"     mapColumn(",
+				"          address,",
+				"          age,",
+				"          firstName,",
+				"          gender,",
+				"          id,",
+				"          lastName,",
+				"          phoneNumbers,",
+				"          skills",
+				"     ),",
+				"     partitionBy('hash', 1),",
+				"     skipDuplicateMapInputs: false,",
+				"     skipDuplicateMapOutputs: false) ~> Flatten1",
+				"Flatten1 output(mapColumn(",
+				"          address,",
+				"          age,",
+				"          firstName,",
+				"          gender,",
+				"          id,",
+				"          lastName,",
+				"          phoneNumbers,",
+				"          skills",
+				"     )) ~> output1"
+			]
+		}
+	}
+}

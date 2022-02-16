@@ -1,0 +1,96 @@
+{
+	"name": "cachesink",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"linkedService": {
+						"referenceName": "AzureSqllinkedservice",
+						"type": "LinkedServiceReference"
+					},
+					"name": "cachemaxempid"
+				},
+				{
+					"linkedService": {
+						"referenceName": "AzureBlobStorage1",
+						"type": "LinkedServiceReference"
+					},
+					"name": "sourcecache"
+				},
+				{
+					"linkedService": {
+						"referenceName": "AzureBlobStorage1",
+						"type": "LinkedServiceReference"
+					},
+					"name": "source1"
+				},
+				{
+					"dataset": {
+						"referenceName": "Employeedataset",
+						"type": "DatasetReference"
+					},
+					"name": "Employeedataset"
+				},
+				{
+					"linkedService": {
+						"referenceName": "AzureBlobStorage1",
+						"type": "LinkedServiceReference"
+					},
+					"name": "extraemployee"
+				}
+			],
+			"sinks": [
+				{
+					"name": "cachemaxempidtamil"
+				},
+				{
+					"dataset": {
+						"referenceName": "cachesink",
+						"type": "DatasetReference"
+					},
+					"name": "increasedkey"
+				},
+				{
+					"name": "departmentcache"
+				},
+				{
+					"name": "maxempidsink"
+				}
+			],
+			"transformations": [
+				{
+					"name": "SurrogateKey1"
+				},
+				{
+					"name": "DerivedColumn1"
+				},
+				{
+					"name": "AlterRow1"
+				},
+				{
+					"name": "Aggregate1"
+				},
+				{
+					"name": "DerivedColumn2"
+				},
+				{
+					"name": "Select1"
+				},
+				{
+					"name": "SurrogateKey2"
+				},
+				{
+					"name": "DerivedColumn3"
+				},
+				{
+					"name": "Union1"
+				},
+				{
+					"name": "AlterRow2"
+				}
+			],
+			"script": "source(output(\n\t\tmaxempid as integer\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tformat: 'query',\n\tstore: 'sqlserver',\n\tquery: 'select max(EmpNo) as maxempid from [cachesinkpractise]',\n\tisolationLevel: 'READ_UNCOMMITTED',\n\tpartitionBy('hash', 1)) ~> cachemaxempid\nsource(output(\n\t\tEmpName as string,\n\t\tDepartment as string,\n\t\tCity as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tformat: 'delimited',\n\tcontainer: 'thamizhcontainer',\n\tfileName: 'cachesink2.csv',\n\tcolumnDelimiter: ',',\n\tescapeChar: '\\\\',\n\tquoteChar: '\\\"',\n\tcolumnNamesAsHeader: true,\n\tpartitionBy('hash', 1)) ~> sourcecache\nsource(output(\n\t\tDepartment as string,\n\t\tDeparment_id as integer,\n\t\tDirector as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tformat: 'delimited',\n\tcontainer: 'thamizhcontainer',\n\tfileName: 'Department.csv',\n\tcolumnDelimiter: ',',\n\tescapeChar: '\\\\',\n\tquoteChar: '\\\"',\n\tcolumnNamesAsHeader: true,\n\tpartitionBy('hash', 1)) ~> source1\nsource(output(\n\t\tEmpNo as long,\n\t\tEmpName as string,\n\t\tDepartment as string,\n\t\tCity as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false) ~> Employeedataset\nsource(output(\n\t\tEmpName as string,\n\t\tDepartment as string,\n\t\tCity as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tformat: 'delimited',\n\tcontainer: 'thamizhcontainer',\n\tfileName: 'extraemployee.csv',\n\tcolumnDelimiter: ',',\n\tescapeChar: '\\\\',\n\tquoteChar: '\\\"',\n\tcolumnNamesAsHeader: true,\n\tpartitionBy('hash', 1)) ~> extraemployee\nsourcecache keyGenerate(output(EmpNo as long),\n\tstartAt: 1L) ~> SurrogateKey1\nSurrogateKey1 derive(EmpNo = EmpNo + cachemaxempidtamil#outputs()[1].maxempid,\n\t\tDepartment = departmentcache#lookup(Department).Deparment_id) ~> DerivedColumn1\nDerivedColumn1 alterRow(updateIf(1==1)) ~> AlterRow1\nDerivedColumn2 aggregate(groupBy(dummy),\n\tMaxEmpNo = max(EmpNo),\n\tpartitionBy('hash', 1)) ~> Aggregate1\nEmployeedataset derive(dummy = 'dummy') ~> DerivedColumn2\nAggregate1 select(mapColumn(\n\t\tMaxEmpNo\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select1\nextraemployee keyGenerate(output(EmpNo as long),\n\tstartAt: 1L,\n\tpartitionBy('hash', 1)) ~> SurrogateKey2\nSurrogateKey2 derive(EmpNo = EmpNo + maxempidsink#outputs()[1].MaxEmpNo,\n\tpartitionBy('hash', 1)) ~> DerivedColumn3\nAlterRow2, Employeedataset union(byName: true)~> Union1\nDerivedColumn3 alterRow(insertIf(true()),\n\tpartitionBy('hash', 1)) ~> AlterRow2\ncachemaxempid sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tstore: 'cache',\n\tformat: 'inline',\n\toutput: true,\n\tsaveOrder: 1,\n\tpartitionBy('hash', 1)) ~> cachemaxempidtamil\nAlterRow1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinput(\n\t\tEmpNo as integer,\n\t\tEmpName as string,\n\t\tDepartment as string,\n\t\tCity as string\n\t),\n\tdeletable:false,\n\tinsertable:true,\n\tupdateable:false,\n\tupsertable:false,\n\tformat: 'table',\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\terrorHandlingOption: 'stopOnFirstError',\n\tpartitionBy('hash', 1)) ~> increasedkey\nsource1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tkeys:['Department'],\n\tstore: 'cache',\n\tformat: 'inline',\n\toutput: false,\n\tsaveOrder: 1,\n\tmapColumn(\n\t\tDepartment,\n\t\tDeparment_id,\n\t\tDirector\n\t),\n\tpartitionBy('hash', 1)) ~> departmentcache\nSelect1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tstore: 'cache',\n\tformat: 'inline',\n\toutput: false,\n\tsaveOrder: 1,\n\tmapColumn(\n\t\tMaxEmpNo\n\t)) ~> maxempidsink"
+		}
+	}
+}

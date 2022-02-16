@@ -1,0 +1,119 @@
+{
+	"name": "Practise",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "Employeedataset",
+						"type": "DatasetReference"
+					},
+					"name": "checkingwithFilter"
+				},
+				{
+					"linkedService": {
+						"referenceName": "AzureBlobStorage1",
+						"type": "LinkedServiceReference"
+					},
+					"name": "Department"
+				},
+				{
+					"dataset": {
+						"referenceName": "DelimitedTextceo",
+						"type": "DatasetReference"
+					},
+					"name": "practiseunion"
+				},
+				{
+					"dataset": {
+						"referenceName": "Employeedataset",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "DelimitedTextoutput",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				},
+				{
+					"dataset": {
+						"referenceName": "outputexcelfiletopoint",
+						"type": "DatasetReference"
+					},
+					"name": "pivotsink"
+				},
+				{
+					"dataset": {
+						"referenceName": "DelimitedTextoutput",
+						"type": "DatasetReference"
+					},
+					"name": "unpivot"
+				},
+				{
+					"name": "sink2"
+				},
+				{
+					"name": "sink3"
+				}
+			],
+			"transformations": [
+				{
+					"name": "Filterforit"
+				},
+				{
+					"name": "Join1"
+				},
+				{
+					"name": "Union1"
+				},
+				{
+					"name": "Aggregate1"
+				},
+				{
+					"name": "pivotpractise"
+				},
+				{
+					"name": "Pivotpractisetamil2"
+				},
+				{
+					"name": "MapDrifted1",
+					"description": "Creates an explicit mapping for each drifted column"
+				},
+				{
+					"name": "Window1"
+				},
+				{
+					"name": "AlterRow1"
+				},
+				{
+					"name": "Unpivot1"
+				},
+				{
+					"name": "AlterRow2"
+				},
+				{
+					"name": "SurrogateKey1"
+				},
+				{
+					"name": "Rank1"
+				},
+				{
+					"name": "Assert1"
+				},
+				{
+					"name": "DerivedColumn1"
+				},
+				{
+					"name": "gooddatafilter"
+				}
+			],
+			"script": "source(output(\n\t\tEmpNo as integer,\n\t\tEmpName as string,\n\t\tDepartment as string,\n\t\tCity as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpartitionBy('hash', 1)) ~> checkingwithFilter\nsource(output(\n\t\tDepartment as string,\n\t\tDeparment_id as integer,\n\t\tDirector as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tformat: 'delimited',\n\tcontainer: 'thamizhcontainer',\n\tfileName: 'Department.csv',\n\tcolumnDelimiter: ',',\n\tescapeChar: '\\\\',\n\tquoteChar: '\\\"',\n\tcolumnNamesAsHeader: true,\n\tpartitionBy('hash', 1)) ~> Department\nsource(output(\n\t\tEmpno as integer,\n\t\tEmpname as string,\n\t\tDepartment as string,\n\t\tcity as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false) ~> practiseunion\nsource(output(\n\t\tEmpNo as integer,\n\t\tEmpName as string,\n\t\tDepartment as string,\n\t\tCity as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpartitionBy('hash', 1)) ~> source1\ncheckingwithFilter filter(equals(Department, 'HR'),\n\tpartitionBy('hash', 1)) ~> Filterforit\nFilterforit, Department join(checkingwithFilter@Department == Department@Department,\n\tjoinType:'inner',\n\tpartitionBy('hash', 1),\n\tbroadcast: 'auto')~> Join1\npractiseunion, source1, checkingwithFilter union(byName: false,\n\tpartitionBy('hash', 1))~> Union1\nUnion1 aggregate(groupBy(Empno),\n\teach(match(name!='Empno'), $$ = first($$)),\n\tpartitionBy('hash', 1)) ~> Aggregate1\nAggregate1 aggregate(groupBy(Department,\n\t\tcity),\n\tEmployeeCount = count(Empno)) ~> pivotpractise\nsource1 pivot(groupBy(Department),\n\tpivotBy(City),\n\t{} = count(EmpNo),\n\tcolumnNaming: 'count of $N$V people',\n\tlateral: true) ~> Pivotpractisetamil2\nPivotpractisetamil2 derive({count of Chennai people} = toLong(byName('count of Chennai people')),\n\t\t{count of Pondy people} = toLong(byName('count of Pondy people'))) ~> MapDrifted1\nsource1 window(over(Department),\n\tasc(EmpNo, true),\n\tDenseRank = denseRank(),\n\tpartitionBy('hash', 1)) ~> Window1\nMapDrifted1 alterRow(updateIf(true())) ~> AlterRow1\nAlterRow1 unpivot(output(\n\t\tCity as string,\n\t\t{count of people} as long\n\t),\n\tungroupBy(Department),\n\tlateral: true,\n\tignoreNullPivots: false) ~> Unpivot1\nUnpivot1 alterRow(updateIf(true()),\n\tpartitionBy('hash', 1)) ~> AlterRow2\nsource1 keyGenerate(output(surrogatekey as long),\n\tstartAt: 1L,\n\tpartitionBy('hash', 1)) ~> SurrogateKey1\nSurrogateKey1 rank(asc(EmpName, true),\n\toutput(Ranking as long),\n\tpartitionBy('hash', 1)) ~> Rank1\nRank1, Department assert(expectUnique(EmpNo, false, 'assertuniqueempno'),\n\texpectExists(source1@Department == Department@Department, false, 'assertdeptexit')) ~> Assert1\nAssert1 derive(validate = isError(),\n\t\tdeparmetexitassert = hasError('assertdeptexit')) ~> DerivedColumn1\nDerivedColumn1 filter(validate == false()) ~> gooddatafilter\nJoin1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinput(\n\t\temployee_id as string,\n\t\temployee_name as string,\n\t\tgender as string,\n\t\tcountry as string,\n\t\tYear as string\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> sink1\nAlterRow1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinput(\n\t\tColumn_1 as string,\n\t\tColumn_2 as string,\n\t\tColumn_3 as string,\n\t\tColumn_4 as string\n\t),\n\tpartitionFileNames:['pivotdata'],\n\tsaveOrder: 0,\n\tmapColumn(\n\t\tDepartment,\n\t\t{count of Chennai people},\n\t\t{count of Pondy people}\n\t),\n\tpartitionBy('hash', 1)) ~> pivotsink\nAlterRow2 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinput(\n\t\temployee_id as string,\n\t\temployee_name as string,\n\t\tgender as string,\n\t\tcountry as string,\n\t\tYear as string\n\t),\n\tpartitionFileNames:['unpivot data'],\n\tpartitionBy('hash', 1)) ~> unpivot\ngooddatafilter sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tstore: 'cache',\n\tformat: 'inline',\n\toutput: false,\n\tsaveOrder: 1) ~> sink2\npivotpractise sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tstore: 'cache',\n\tformat: 'inline',\n\toutput: false,\n\tsaveOrder: 1) ~> sink3"
+		}
+	}
+}

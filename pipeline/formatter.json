@@ -1,0 +1,38 @@
+{
+	"name": "formatter",
+	"properties": {
+		"description": "flattern,stringfy,parse",
+		"activities": [
+			{
+				"name": "Formatterpipeline",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "1.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "dataflow-formatter",
+						"type": "DataFlowReference"
+					},
+					"compute": {
+						"coreCount": 8,
+						"computeType": "General"
+					},
+					"traceLevel": "None",
+					"cacheSinks": {
+						"firstRowOnly": true
+					}
+				}
+			}
+		],
+		"annotations": [],
+		"lastPublishTime": "2022-02-09T18:26:07Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

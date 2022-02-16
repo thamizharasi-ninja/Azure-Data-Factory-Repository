@@ -1,0 +1,118 @@
+{
+	"name": "switch",
+	"properties": {
+		"activities": [
+			{
+				"name": "Switchactivity",
+				"type": "Switch",
+				"dependsOn": [
+					{
+						"activity": "Validation1",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"on": {
+						"value": "@pipeline().parameters.outputfile",
+						"type": "Expression"
+					},
+					"cases": [
+						{
+							"value": "output1",
+							"activities": [
+								{
+									"name": "Get Metadata2",
+									"type": "GetMetadata",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataset": {
+											"referenceName": "Employeedataset",
+											"type": "DatasetReference"
+										},
+										"fieldList": [
+											"contentMD5",
+											"itemName",
+											"itemName",
+											"lastModified",
+											"size",
+											"structure"
+										],
+										"storeSettings": {
+											"type": "AzureBlobStorageReadSettings",
+											"recursive": true,
+											"enablePartitionDiscovery": false
+										},
+										"formatSettings": {
+											"type": "DelimitedTextReadSettings"
+										}
+									}
+								}
+							]
+						}
+					],
+					"defaultActivities": [
+						{
+							"name": "Get Metadata1",
+							"type": "GetMetadata",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataset": {
+									"referenceName": "AzureSqlTabledataset",
+									"type": "DatasetReference"
+								},
+								"fieldList": [
+									"structure"
+								]
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Validation1",
+				"type": "Validation",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "azureblobinputfolder",
+						"type": "DatasetReference",
+						"parameters": {
+							"inputfiletopoint": "Department.csv"
+						}
+					},
+					"timeout": "7.00:00:00",
+					"sleep": 10
+				}
+			}
+		],
+		"parameters": {
+			"outputfile": {
+				"type": "string",
+				"defaultValue": "output1"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-02-15T16:38:08Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

@@ -1,0 +1,31 @@
+{
+	"name": "dataflowflowlet",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "jsonoutput",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "Select1"
+				},
+				{
+					"name": "compose1",
+					"flowlet": {
+						"referenceName": "flowletflatttern",
+						"type": "DataFlowReference"
+					}
+				}
+			],
+			"script": "parameters{\n\tparameter1 as string ('externallcall.csv')\n}\ncompose(composition: 'flowletflatttern') ~> compose1@(output1)\ncompose1@output1 select(mapColumn(\n\t\tfirstName,\n\t\tgender,\n\t\tid,\n\t\tlastName,\n\t\tphoneNumbers,\n\t\tskills\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select1\nSelect1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['flowlettry'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tmapColumn(\n\t\tfirstName,\n\t\tgender,\n\t\tid,\n\t\tlastName,\n\t\tphoneNumbers,\n\t\tskills\n\t),\n\tpartitionBy('hash', 1)) ~> sink1"
+		}
+	}
+}

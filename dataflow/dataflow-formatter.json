@@ -1,0 +1,54 @@
+{
+	"name": "dataflow-formatter",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "Jsonforflatterninput",
+						"type": "DatasetReference"
+					},
+					"name": "sourcejsonfile"
+				},
+				{
+					"dataset": {
+						"referenceName": "ParseAzureSqlDataset",
+						"type": "DatasetReference"
+					},
+					"name": "parsepractise"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "jsonoutput",
+						"type": "DatasetReference"
+					},
+					"name": "Flatternsink"
+				}
+			],
+			"transformations": [
+				{
+					"name": "Flattenpractise1"
+				},
+				{
+					"name": "Flatten1"
+				},
+				{
+					"name": "skillsparse"
+				},
+				{
+					"name": "Parseaddress"
+				},
+				{
+					"name": "Stringify1"
+				},
+				{
+					"name": "Stringify2"
+				}
+			],
+			"script": "source(output(\n\t\tid as string,\n\t\tfirstName as string,\n\t\tlastName as string,\n\t\tskills as string[],\n\t\tgender as string,\n\t\tage as integer,\n\t\taddress as (streetAddress as string, city as string, state as string, postalCode as string),\n\t\tphoneNumbers as (type as string, number as string)[]\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tdocumentForm: 'singleDocument') ~> sourcejsonfile\nsource(output(\n\t\tEmpNo as integer,\n\t\tEmpName as string,\n\t\tskills as string,\n\t\taddress as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tisolationLevel: 'READ_UNCOMMITTED',\n\tformat: 'table',\n\tpartitionBy('hash', 1)) ~> parsepractise\nsourcejsonfile foldDown(unroll(skills),\n\tmapColumn(\n\t\tid,\n\t\tfirstName,\n\t\tlastName,\n\t\tskills,\n\t\tgender,\n\t\tage,\n\t\taddress,\n\t\tphoneNumbers\n\t),\n\tskipDuplicateMapInputs: false,\n\tskipDuplicateMapOutputs: false) ~> Flattenpractise1\nFlattenpractise1 foldDown(unroll(phoneNumbers),\n\tmapColumn(\n\t\tid,\n\t\tfirstName,\n\t\tlastName,\n\t\tskills,\n\t\tgender,\n\t\tage,\n\t\taddress,\n\t\tphoneNumbers\n\t),\n\tskipDuplicateMapInputs: false,\n\tskipDuplicateMapOutputs: false) ~> Flatten1\nparsepractise parse(parseskills = skills ? (skill1 as string,\n\t\tskill2 as string,\n\t\tskill3 as string),\n\tformat: 'delimited',\n\tcolumnNamesAsHeader: false,\n\tcolumnDelimiter: '|',\n\tnullValue: '') ~> skillsparse\nskillsparse parse(parseaddress = address ? (streetAddress as string,\n\t\tcity as string,\n\t\tstate as string,\n\t\tpostalCode as string),\n\tpartitionBy('hash', 1),\n\tformat: 'json',\n\tdocumentForm: 'documentPerLine') ~> Parseaddress\nsourcejsonfile stringify(stringfyaddress = address ? string,\n\tformat: 'json') ~> Stringify1\nStringify1 stringify(phonenumberstringfy = phoneNumbers ? string,\n\tformat: 'json') ~> Stringify2\nFlatten1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tpartitionFileNames:['flatternfile'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tmapColumn(\n\t\tid,\n\t\tfirstName,\n\t\tlastName,\n\t\tskills,\n\t\tgender,\n\t\tage,\n\t\taddress,\n\t\tphoneNumbers\n\t),\n\tpartitionBy('hash', 1)) ~> Flatternsink"
+		}
+	}
+}

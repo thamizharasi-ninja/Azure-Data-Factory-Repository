@@ -1,0 +1,64 @@
+{
+	"name": "scdtype2",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "Employeedataset",
+						"type": "DatasetReference"
+					},
+					"name": "Employeeblob"
+				},
+				{
+					"dataset": {
+						"referenceName": "AzureSqlTabledataset",
+						"type": "DatasetReference"
+					},
+					"name": "DimEmployee"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "AzureSqlTabledataset",
+						"type": "DatasetReference"
+					},
+					"name": "NewRecord"
+				},
+				{
+					"dataset": {
+						"referenceName": "AzureSqlTabledataset",
+						"type": "DatasetReference"
+					},
+					"name": "sinktype2scd"
+				}
+			],
+			"transformations": [
+				{
+					"name": "isActive"
+				},
+				{
+					"name": "DimEmployeeSelection"
+				},
+				{
+					"name": "Lookusqlblob"
+				},
+				{
+					"name": "Notnull"
+				},
+				{
+					"name": "Selectsqldata"
+				},
+				{
+					"name": "updateisActive"
+				},
+				{
+					"name": "AlterRow1"
+				}
+			],
+			"script": "source(output(\n\t\tEmpNo as integer,\n\t\tEmpName as string,\n\t\tDepartment as string,\n\t\tCity as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpartitionBy('hash', 1)) ~> Employeeblob\nsource(output(\n\t\tEmp_sid as integer,\n\t\tEmpNo as integer,\n\t\tEmpName as string,\n\t\tDepartment as string,\n\t\tCity as string,\n\t\tis_Active as integer\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tisolationLevel: 'READ_UNCOMMITTED',\n\tformat: 'table',\n\tpartitionBy('hash', 1)) ~> DimEmployee\nEmployeeblob derive(is_Active = 1) ~> isActive\nDimEmployee select(mapColumn(\n\t\tsql_Emp_sid = Emp_sid,\n\t\tsql_EmpNo = EmpNo,\n\t\tsql_EmpName = EmpName,\n\t\tsql_Department = Department,\n\t\tsql_City = City,\n\t\tsql_is_Active = is_Active\n\t),\n\tpartitionBy('hash', 1),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> DimEmployeeSelection\nEmployeeblob, DimEmployeeSelection lookup(EmpNo == sql_EmpNo,\n\tmultiple: true,\n\tpartitionBy('hash', 1),\n\tbroadcast: 'auto')~> Lookusqlblob\nLookusqlblob filter(!isNull(sql_EmpNo),\n\tpartitionBy('hash', 1)) ~> Notnull\nNotnull select(mapColumn(\n\t\tsql_Emp_sid,\n\t\tsql_EmpNo,\n\t\tsql_EmpName,\n\t\tsql_Department,\n\t\tsql_City,\n\t\tsql_is_Active\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Selectsqldata\nSelectsqldata derive(sql_is_Active = 0,\n\tpartitionBy('hash', 1)) ~> updateisActive\nupdateisActive alterRow(updateIf(1==1),\n\tpartitionBy('hash', 1)) ~> AlterRow1\nisActive sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinput(\n\t\tEmp_sid as integer,\n\t\tEmpNo as integer,\n\t\tEmpName as string,\n\t\tDepartment as string,\n\t\tCity as string,\n\t\tis_Active as integer\n\t),\n\tdeletable:false,\n\tinsertable:true,\n\tupdateable:false,\n\tupsertable:false,\n\tformat: 'table',\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tsaveOrder: 2,\n\terrorHandlingOption: 'stopOnFirstError',\n\tmapColumn(\n\t\tEmpNo,\n\t\tEmpName,\n\t\tDepartment,\n\t\tCity,\n\t\tis_Active\n\t),\n\tpartitionBy('hash', 1)) ~> NewRecord\nAlterRow1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinput(\n\t\tEmp_sid as integer,\n\t\tEmpNo as integer,\n\t\tEmpName as string,\n\t\tDepartment as string,\n\t\tCity as string,\n\t\tis_Active as integer\n\t),\n\tdeletable:false,\n\tinsertable:false,\n\tupdateable:true,\n\tupsertable:false,\n\tkeys:['Emp_sid'],\n\tformat: 'table',\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tsaveOrder: 1,\n\terrorHandlingOption: 'stopOnFirstError',\n\tmapColumn(\n\t\tEmp_sid = sql_Emp_sid,\n\t\tEmpNo = sql_EmpNo,\n\t\tEmpName = sql_EmpName,\n\t\tDepartment = sql_Department,\n\t\tCity = sql_City,\n\t\tis_Active = sql_is_Active\n\t),\n\tpartitionBy('hash', 1)) ~> sinktype2scd"
+		}
+	}
+}

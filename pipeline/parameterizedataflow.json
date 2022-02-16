@@ -1,0 +1,49 @@
+{
+	"name": "parameterizedataflow",
+	"properties": {
+		"activities": [
+			{
+				"name": "parameterizedataflow",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "1.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "parameterizeddataflow-runningtotal",
+						"type": "DataFlowReference",
+						"parameters": {
+							"Departmentparam": {
+								"value": "'@{pipeline().parameters.Departparam}'",
+								"type": "Expression"
+							}
+						}
+					},
+					"compute": {
+						"coreCount": 8,
+						"computeType": "General"
+					},
+					"traceLevel": "None",
+					"cacheSinks": {
+						"firstRowOnly": true
+					}
+				}
+			}
+		],
+		"parameters": {
+			"Departparam": {
+				"type": "string",
+				"defaultValue": "IT"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-02-16T15:27:10Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

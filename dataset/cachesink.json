@@ -1,0 +1,35 @@
+{
+	"name": "cachesink",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureSqllinkedservice",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "EmpNo",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "EmpName",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Department",
+				"type": "nvarchar"
+			},
+			{
+				"name": "City",
+				"type": "nvarchar"
+			}
+		],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": "cachesinkpractise"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

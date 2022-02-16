@@ -1,0 +1,63 @@
+{
+	"name": "blobdataflow1",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "DelimitedTextoutput",
+						"type": "DatasetReference"
+					},
+					"name": "blobinput"
+				},
+				{
+					"dataset": {
+						"referenceName": "externalcallfile",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				},
+				{
+					"linkedService": {
+						"referenceName": "AzureBlobStorage1",
+						"type": "LinkedServiceReference"
+					},
+					"name": "source3"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "DelimitedTextoutput",
+						"type": "DatasetReference"
+					},
+					"name": "outputdata"
+				}
+			],
+			"transformations": [
+				{
+					"name": "ExternalCall1",
+					"linkedService": {
+						"referenceName": "RestService1",
+						"type": "LinkedServiceReference"
+					}
+				},
+				{
+					"name": "ExternalCall2",
+					"linkedService": {
+						"referenceName": "RestService1",
+						"type": "LinkedServiceReference"
+					}
+				},
+				{
+					"name": "dataextract"
+				},
+				{
+					"name": "Derivedstring"
+				}
+			],
+			"script": "source(output(\n\t\temployee_id as string,\n\t\temployee_name as string,\n\t\tgender as string,\n\t\tcountry as string,\n\t\tYear as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpartitionBy('hash', 1)) ~> blobinput\nsource(output(\n\t\torderid as integer,\n\t\tcustomername as string,\n\t\temail as string,\n\t\tphone as string,\n\t\tordertotal as string,\n\t\tTranscurr as string,\n\t\tBasecurr as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tpartitionBy('hash', 1)) ~> source1\nsource(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tformat: 'delta',\n\tcontainer: 'thamizhcontainer') ~> source3\nDerivedstring call(mapColumn(\n\t\tCurrReq\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tallowSchemaDrift: true,\n\tformat: 'rest',\n\tstore: 'restservice',\n\ttimeout: 30,\n\trequestInterval: 0,\n\thttpMethod: 'GET',\n\trowRelativeUrl: 'CurrReq',\n\trequestFormat: ['type' -> 'json'],\n\tresponseFormat: ['type' -> 'json', 'documentForm' -> 'singleDocument']) ~> ExternalCall1\nDerivedstring call(mapColumn(\n\t\tCurrReq\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\toutput(\n\t\theaders as [string,string],\n\t\tbody as (terms as string, privacy as string, from as string, amount as decimal(10,2), timestamp as timestamp, to as (quotecurrency as string, mid as string))\n\t),\n\tallowSchemaDrift: true,\n\tformat: 'rest',\n\tstore: 'restservice',\n\ttimeout: 30,\n\trequestInterval: 0,\n\thttpMethod: 'GET',\n\trowRelativeUrl: 'CurrReq',\n\trequestFormat: ['type' -> 'json'],\n\tresponseFormat: ['type' -> 'json', 'documentForm' -> 'singleDocument']) ~> ExternalCall2\nblobinput derive(Year = toInteger(trim(right(employee_name, 6), '()')),\n\t\temployee_name = toString(left(employee_name, length(employee_name)-6))) ~> dataextract\nsource1 derive(CurrReq = '?from=' + Transcurr + '&to=' + Basecurr + '&amount=' + ordertotal,\n\tpartitionBy('hash', 1)) ~> Derivedstring\ndataextract sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinput(\n\t\temployee_id as string,\n\t\temployee_name as string,\n\t\tgender as string,\n\t\tcountry as string,\n\t\tYear as string\n\t),\n\tpartitionFileNames:['outputfile.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tmapColumn(\n\t\temployee_id,\n\t\temployee_name,\n\t\tgender,\n\t\tcountry,\n\t\tYear\n\t),\n\tpartitionBy('hash', 1)) ~> outputdata"
+		}
+	}
+}

@@ -1,0 +1,77 @@
+{
+	"name": "lookup-filter-execute",
+	"properties": {
+		"activities": [
+			{
+				"name": "Lookup1",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "CREATE TABLE [dbo].[FactInternetSales]\n(   [ProductKey]            int          NOT NULL\n,   [OrderDateKey]          int          NOT NULL\n,   [CustomerKey]           int          NOT NULL\n,   [PromotionKey]          int          NOT NULL\n,   [SalesOrderNumber]      nvarchar(20) NOT NULL\n,   [OrderQuantity]         smallint     NOT NULL\n,   [UnitPrice]             money        \n,   [SalesAmount] \nselect 1 as abcd",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "AzureSqlTabledataset",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Filter1",
+				"type": "Filter",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.valuesofarray",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@greater(item(),3)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Execute Pipeline1",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "getmetadata",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			}
+		],
+		"parameters": {
+			"valuesofarray": {
+				"type": "array",
+				"defaultValue": [
+					1,
+					2,
+					3,
+					4,
+					5,
+					6
+				]
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-02-15T16:38:08Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

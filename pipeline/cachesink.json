@@ -1,0 +1,62 @@
+{
+	"name": "cachesink",
+	"properties": {
+		"activities": [
+			{
+				"name": "cachesink",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "1.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "cachesink",
+						"type": "DataFlowReference"
+					},
+					"compute": {
+						"coreCount": 8,
+						"computeType": "General"
+					},
+					"traceLevel": "None",
+					"cacheSinks": {
+						"firstRowOnly": true
+					}
+				}
+			},
+			{
+				"name": "Set variable1",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "cachesink",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "maxempid",
+					"value": {
+						"value": "@activity('cachesink').output.maxempid",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"variables": {
+			"maxempid": {
+				"type": "String"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-02-13T10:20:59Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

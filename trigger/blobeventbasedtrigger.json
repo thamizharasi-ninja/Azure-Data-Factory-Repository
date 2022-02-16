@@ -1,0 +1,29 @@
+{
+	"name": "blobeventbasedtrigger",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "copy-activity",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"sourcefiletopoint": "@triggerbody().filename",
+					"destinationfilename": "@triggerbody().filename"
+				}
+			}
+		],
+		"type": "BlobEventsTrigger",
+		"typeProperties": {
+			"blobPathBeginsWith": "/thamizhcontainer/blobs/",
+			"blobPathEndsWith": ".csv",
+			"ignoreEmptyBlobs": true,
+			"scope": "/subscriptions/c44e1332-910a-44b0-b16b-ba9b9dc14502/resourceGroups/starting/providers/Microsoft.Storage/storageAccounts/thamizh",
+			"events": [
+				"Microsoft.Storage.BlobCreated"
+			]
+		}
+	}
+}

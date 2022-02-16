@@ -1,0 +1,49 @@
+{
+	"name": "parameterizeddataflow-runningtotal",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "Employeedataset",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				},
+				{
+					"dataset": {
+						"referenceName": "runninigtotal",
+						"type": "DatasetReference"
+					},
+					"name": "runningtotal"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "DelimitedTextoutput",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				},
+				{
+					"dataset": {
+						"referenceName": "DelimitedTextoutput",
+						"type": "DatasetReference"
+					},
+					"name": "sink2"
+				}
+			],
+			"transformations": [
+				{
+					"name": "Filter1"
+				},
+				{
+					"name": "Window1"
+				}
+			],
+			"script": "parameters{\n\tDepartmentparam as string\n}\nsource(output(\n\t\tEmpNo as string,\n\t\tEmpName as string,\n\t\tDepartment as string,\n\t\tCity as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false) ~> source1\nsource(output(\n\t\tPO as short,\n\t\tItemName as string,\n\t\tQuantity as short\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false) ~> runningtotal\nsource1 filter(Department == $Departmentparam) ~> Filter1\nrunningtotal window(asc(Quantity, true),\n\tRunningTotalQuantity = sum(toInteger(Quantity)),\n\tpartitionBy('hash', 1)) ~> Window1\nFilter1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinput(\n\t\temployee_id as string,\n\t\temployee_name as string,\n\t\tgender as string,\n\t\tcountry as string,\n\t\tYear as string\n\t),\n\tpartitionFileNames:['parameterizedalaflowcheck.CSV'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> sink1\nWindow1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinput(\n\t\temployee_id as string,\n\t\temployee_name as string,\n\t\tgender as string,\n\t\tcountry as string,\n\t\tYear as string\n\t),\n\tpartitionFileNames:['runningtotalmdf.csv'],\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tpartitionBy('hash', 1)) ~> sink2"
+		}
+	}
+}
