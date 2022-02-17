@@ -1,0 +1,52 @@
+{
+	"name": "parquetbloboutput",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureBlobStorage1",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "Parquet",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"container": "output"
+			},
+			"compressionCodec": "snappy"
+		},
+		"schema": [
+			{
+				"name": "EmpNo",
+				"type": "INT32"
+			},
+			{
+				"name": "EmpName",
+				"type": "UTF8"
+			},
+			{
+				"name": "Department",
+				"type": "UTF8"
+			},
+			{
+				"name": "City",
+				"type": "UTF8"
+			},
+			{
+				"name": "surrogatekey",
+				"type": "INT64"
+			},
+			{
+				"name": "Ranking",
+				"type": "INT64"
+			},
+			{
+				"name": "validate",
+				"type": "BOOLEAN"
+			},
+			{
+				"name": "deparmetexitassert",
+				"type": "BOOLEAN"
+			}
+		]
+	}
+}
